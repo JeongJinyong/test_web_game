@@ -3,6 +3,7 @@ import { GameConfig } from '../config/GameConfig';
 
 export class Player {
   private scene: Phaser.Scene;
+  private container: Phaser.GameObjects.Container;
   private sprite: Phaser.GameObjects.Graphics;
   private body: Phaser.Physics.Arcade.Body;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -58,17 +59,22 @@ export class Player {
     const x = tileX * tileSize + tileSize / 2;
     const y = tileY * tileSize + tileSize / 2;
 
+    // Container 생성
+    this.container = scene.add.container(x, y);
+
     // Graphics로 플레이어 생성 (파란색 원)
     this.sprite = scene.add.graphics();
     this.drawPlayer();
-    this.sprite.setPosition(x, y);
+
+    // Graphics를 Container에 추가
+    this.container.add(this.sprite);
 
     // 조명 효과 적용
     this.sprite.setPipeline('Light2D');
 
-    // 물리 바디 추가
-    scene.physics.add.existing(this.sprite);
-    this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    // Container에 물리 바디 추가
+    scene.physics.add.existing(this.container);
+    this.body = this.container.body as Phaser.Physics.Arcade.Body;
     this.body.setCircle(tileSize / 3);
     this.body.setOffset(-tileSize / 3, -tileSize / 3);
 
@@ -139,8 +145,8 @@ export class Player {
 
     // 공격 이벤트 발생 (GameScene에서 처리)
     this.scene.events.emit('playerAttack', {
-      x: this.sprite.x,
-      y: this.sprite.y,
+      x: this.container.x,
+      y: this.container.y,
       angle: angle,
       damage: this.getAttackDamage()
     });
@@ -158,7 +164,7 @@ export class Player {
     }
 
     this.attackGraphics = this.scene.add.graphics();
-    this.attackGraphics.setPosition(this.sprite.x, this.sprite.y);
+    this.attackGraphics.setPosition(this.container.x, this.container.y);
 
     // 검 모양 - 빨간 슬래시 (다크 판타지)
     const attackRange = GameConfig.player.attackRange;
@@ -212,7 +218,7 @@ export class Player {
       const particleGraphics = this.scene.add.graphics();
       particleGraphics.fillStyle(0xff4466, 1);
       particleGraphics.fillCircle(0, 0, 3);
-      particleGraphics.setPosition(this.sprite.x + x, this.sprite.y + y);
+      particleGraphics.setPosition(this.container.x + x, this.container.y + y);
       particleGraphics.setPipeline('Light2D');
 
       const randomX = Phaser.Math.Between(-20, 20);
@@ -294,8 +300,8 @@ export class Player {
 
     // 타일 위치 업데이트
     const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
-    this.tileX = Math.floor(this.sprite.x / tileSize);
-    this.tileY = Math.floor(this.sprite.y / tileSize);
+    this.tileX = Math.floor(this.container.x / tileSize);
+    this.tileY = Math.floor(this.container.y / tileSize);
   }
 
   private tryDash(): void {
@@ -359,7 +365,7 @@ export class Player {
       this.scene.time.delayedCall(i * 60, () => {
         const afterImage = this.scene.add.graphics();
         afterImage.fillStyle(0x00aaff, 0.5 - i * 0.1);
-        afterImage.fillCircle(this.sprite.x, this.sprite.y, 10);
+        afterImage.fillCircle(this.container.x, this.container.y, 10);
         afterImage.setPipeline('Light2D');
 
         this.scene.tweens.add({
@@ -437,11 +443,11 @@ export class Player {
   }
 
   getPosition(): { x: number, y: number } {
-    return { x: this.sprite.x, y: this.sprite.y };
+    return { x: this.container.x, y: this.container.y };
   }
 
-  getSprite(): Phaser.GameObjects.Graphics {
-    return this.sprite;
+  getSprite(): Phaser.GameObjects.Container {
+    return this.container;
   }
 
   getBody(): Phaser.Physics.Arcade.Body {
@@ -464,7 +470,7 @@ export class Player {
     const x = tileX * tileSize + tileSize / 2;
     const y = tileY * tileSize + tileSize / 2;
 
-    this.sprite.setPosition(x, y);
+    this.container.setPosition(x, y);
   }
 
   // 아이템 장착 스탯 적용
