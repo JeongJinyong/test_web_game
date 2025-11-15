@@ -54,6 +54,9 @@ export class Player {
     this.drawPlayer();
     this.sprite.setPosition(x, y);
 
+    // 조명 효과 적용
+    this.sprite.setPipeline('Light2D');
+
     // 물리 바디 추가
     scene.physics.add.existing(this.sprite);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
@@ -121,6 +124,9 @@ export class Player {
     // 검 휘두르기 애니메이션
     this.showAttackAnimation(angle);
 
+    // 카메라 쉐이크 (가볍게)
+    this.scene.cameras.main.shake(100, 0.002);
+
     // 공격 이벤트 발생 (GameScene에서 처리)
     this.scene.events.emit('playerAttack', {
       x: this.sprite.x,
@@ -144,23 +150,37 @@ export class Player {
     this.attackGraphics = this.scene.add.graphics();
     this.attackGraphics.setPosition(this.sprite.x, this.sprite.y);
 
-    // 검 모양 (선)
+    // 검 모양 - 빨간 슬래시 (다크 판타지)
     const attackRange = GameConfig.player.attackRange;
-    this.attackGraphics.lineStyle(4, 0xffff00, 1);
+    this.attackGraphics.lineStyle(6, 0xff2244, 1);
 
     const startX = Math.cos(angle) * 10;
     const startY = Math.sin(angle) * 10;
     const endX = Math.cos(angle) * attackRange;
     const endY = Math.sin(angle) * attackRange;
 
+    // 슬래시 효과 - 아크 모양
     this.attackGraphics.beginPath();
-    this.attackGraphics.moveTo(startX, startY);
-    this.attackGraphics.lineTo(endX, endY);
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      const currentAngle = angle + (Math.PI / 4) * (t - 0.5);
+      const dist = attackRange * (0.5 + 0.5 * Math.sin(t * Math.PI));
+      const px = Math.cos(currentAngle) * dist;
+      const py = Math.sin(currentAngle) * dist;
+
+      if (i === 0) {
+        this.attackGraphics.moveTo(px, py);
+      } else {
+        this.attackGraphics.lineTo(px, py);
+      }
+    }
     this.attackGraphics.strokePath();
 
-    // 검 끝 부분 강조
-    this.attackGraphics.fillStyle(0xffffff, 1);
-    this.attackGraphics.fillCircle(endX, endY, 3);
+    // 빨간 파티클 효과
+    this.createSlashParticles(endX, endY);
+
+    // 조명 효과 적용
+    this.attackGraphics.setPipeline('Light2D');
 
     // 페이드아웃 애니메이션
     this.scene.tweens.add({
@@ -174,6 +194,31 @@ export class Player {
         }
       }
     });
+  }
+
+  private createSlashParticles(x: number, y: number): void {
+    // 빨간 슬래시 파티클
+    for (let i = 0; i < 5; i++) {
+      const particleGraphics = this.scene.add.graphics();
+      particleGraphics.fillStyle(0xff4466, 1);
+      particleGraphics.fillCircle(0, 0, 3);
+      particleGraphics.setPosition(this.sprite.x + x, this.sprite.y + y);
+      particleGraphics.setPipeline('Light2D');
+
+      const randomX = Phaser.Math.Between(-20, 20);
+      const randomY = Phaser.Math.Between(-20, 20);
+
+      this.scene.tweens.add({
+        targets: particleGraphics,
+        x: particleGraphics.x + randomX,
+        y: particleGraphics.y + randomY,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => {
+          particleGraphics.destroy();
+        }
+      });
+    }
   }
 
   private getAttackDamage(): number {
@@ -240,6 +285,12 @@ export class Player {
     if (this.currentHP < 0) {
       this.currentHP = 0;
     }
+
+    // 피격 사운드 이벤트
+    this.scene.events.emit('playerHurt');
+
+    // 카메라 쉐이크 (피격 시 더 강하게)
+    this.scene.cameras.main.shake(150, 0.005);
 
     // 피격 효과
     this.scene.tweens.add({
