@@ -18,9 +18,13 @@ export class Player {
 
   // Combat properties
   private maxHP: number;
+  private baseMaxHP: number; // 기본 HP
   private currentHP: number;
   private attackDamageMin: number;
   private attackDamageMax: number;
+  private baseAttackDamageMin: number; // 기본 공격력
+  private baseAttackDamageMax: number;
+  private criticalChance: number = 0; // 크리티컬 확률 (%)
   private attackCooldown: number;
   private lastAttackTime: number = 0;
   private isAttacking: boolean = false;
@@ -32,10 +36,13 @@ export class Player {
     this.tileY = tileY;
 
     // Combat stats initialization
-    this.maxHP = GameConfig.player.maxHP;
+    this.baseMaxHP = GameConfig.player.maxHP;
+    this.maxHP = this.baseMaxHP;
     this.currentHP = this.maxHP;
-    this.attackDamageMin = GameConfig.player.attackDamageMin;
-    this.attackDamageMax = GameConfig.player.attackDamageMax;
+    this.baseAttackDamageMin = GameConfig.player.attackDamageMin;
+    this.baseAttackDamageMax = GameConfig.player.attackDamageMax;
+    this.attackDamageMin = this.baseAttackDamageMin;
+    this.attackDamageMax = this.baseAttackDamageMax;
     this.attackCooldown = GameConfig.player.attackCooldown;
 
     const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
@@ -170,7 +177,35 @@ export class Player {
   }
 
   private getAttackDamage(): number {
-    return Phaser.Math.Between(this.attackDamageMin, this.attackDamageMax);
+    let damage = Phaser.Math.Between(this.attackDamageMin, this.attackDamageMax);
+
+    // 크리티컬 계산
+    if (Math.random() * 100 < this.criticalChance) {
+      damage *= 2;
+      // 크리티컬 이펙트 표시
+      this.showCriticalEffect();
+    }
+
+    return damage;
+  }
+
+  private showCriticalEffect(): void {
+    const playerPos = this.getPosition();
+    const critText = this.scene.add.text(playerPos.x, playerPos.y - 50, 'CRITICAL!', {
+      font: 'bold 20px monospace',
+      color: '#ff0000'
+    });
+    critText.setOrigin(0.5, 0.5);
+
+    this.scene.tweens.add({
+      targets: critText,
+      y: playerPos.y - 80,
+      alpha: 0,
+      duration: 1000,
+      onComplete: () => {
+        critText.destroy();
+      }
+    });
   }
 
   update(): void {
@@ -270,5 +305,59 @@ export class Player {
     const y = tileY * tileSize + tileSize / 2;
 
     this.sprite.setPosition(x, y);
+  }
+
+  // 아이템 장착 스탯 적용
+  applyItemStats(statValue: number, type: 'weapon' | 'armor' | 'ring'): void {
+    switch (type) {
+      case 'weapon':
+        this.attackDamageMin = this.baseAttackDamageMin + statValue;
+        this.attackDamageMax = this.baseAttackDamageMax + statValue;
+        break;
+
+      case 'armor':
+        const hpDiff = statValue;
+        this.maxHP = this.baseMaxHP + hpDiff;
+        this.currentHP += hpDiff;
+        if (this.currentHP > this.maxHP) {
+          this.currentHP = this.maxHP;
+        }
+        this.scene.events.emit('playerHPChanged', this.currentHP, this.maxHP);
+        break;
+
+      case 'ring':
+        this.criticalChance += statValue;
+        break;
+    }
+  }
+
+  // 아이템 장착 해제 스탯 제거
+  removeItemStats(statValue: number, type: 'weapon' | 'armor' | 'ring'): void {
+    switch (type) {
+      case 'weapon':
+        this.attackDamageMin = this.baseAttackDamageMin;
+        this.attackDamageMax = this.baseAttackDamageMax;
+        break;
+
+      case 'armor':
+        const hpDiff = statValue;
+        this.maxHP = this.baseMaxHP;
+        if (this.currentHP > this.maxHP) {
+          this.currentHP = this.maxHP;
+        }
+        this.scene.events.emit('playerHPChanged', this.currentHP, this.maxHP);
+        break;
+
+      case 'ring':
+        this.criticalChance -= statValue;
+        if (this.criticalChance < 0) {
+          this.criticalChance = 0;
+        }
+        break;
+    }
+  }
+
+  getCriticalChance(): number {
+    return this.criticalChance;
   }
 }

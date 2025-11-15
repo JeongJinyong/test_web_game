@@ -4,12 +4,14 @@ import { DungeonGenerator, TileType } from '../systems/DungeonGenerator';
 import { Player } from '../entities/Player';
 import { Enemy, EnemyType } from '../entities/Enemy';
 import { CombatSystem } from '../systems/CombatSystem';
+import { LootSystem } from '../systems/LootSystem';
 
 export class GameScene extends Phaser.Scene {
   private dungeon!: DungeonGenerator;
   private player!: Player;
   private enemies: Enemy[] = [];
   private combatSystem!: CombatSystem;
+  private lootSystem!: LootSystem;
   private tileGraphics!: Phaser.GameObjects.Graphics;
   private camera!: Phaser.Cameras.Scene2D.Camera;
 
@@ -39,6 +41,9 @@ export class GameScene extends Phaser.Scene {
     // 전투 시스템 초기화
     this.combatSystem = new CombatSystem(this, this.player, this.enemies);
 
+    // 루트 시스템 초기화
+    this.lootSystem = new LootSystem(this);
+
     // 카메라 설정
     this.camera = this.cameras.main;
     this.camera.startFollow(this.player.getSprite(), true, 0.1, 0.1);
@@ -60,6 +65,26 @@ export class GameScene extends Phaser.Scene {
     // F5 키로 던전 재생성
     this.input.keyboard?.on('keydown-F5', () => {
       this.scene.restart();
+    });
+
+    // 적 처치 시 드롭 이벤트
+    this.events.on('enemyDied', (data: { x: number, y: number }) => {
+      this.lootSystem.tryDropLoot(data.x, data.y);
+    });
+
+    // 플레이어 스탯 적용 이벤트
+    this.events.on('applyItemStats', (statValue: number, type: 'weapon' | 'armor' | 'ring') => {
+      this.player.applyItemStats(statValue, type);
+    });
+
+    // 플레이어 스탯 제거 이벤트
+    this.events.on('removeItemStats', (statValue: number, type: 'weapon' | 'armor' | 'ring') => {
+      this.player.removeItemStats(statValue, type);
+    });
+
+    // 플레이어 회복 이벤트
+    this.events.on('healPlayer', (amount: number) => {
+      this.player.heal(amount);
     });
   }
 
@@ -151,6 +176,12 @@ export class GameScene extends Phaser.Scene {
       this.combatSystem.update();
       // 죽은 적 제거
       this.enemies = this.combatSystem.getEnemies();
+    }
+
+    // 루트 시스템 업데이트
+    if (this.lootSystem) {
+      const playerPos = this.player.getPosition();
+      this.lootSystem.update(playerPos.x, playerPos.y);
     }
   }
 }

@@ -191,10 +191,11 @@ export class Enemy {
   }
 
   private dropLoot(): void {
-    // TODO: LootSystem 연동
-    // 임시로 콘솔 로그
-    const goldAmount = Phaser.Math.Between(5, 15);
-    console.log(`${this.type} dropped ${goldAmount} gold at (${this.sprite.x}, ${this.sprite.y})`);
+    // LootSystem에 드롭 이벤트 발생
+    this.scene.events.emit('enemyDied', {
+      x: this.sprite.x,
+      y: this.sprite.y
+    });
   }
 
   destroy(): void {
