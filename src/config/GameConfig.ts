@@ -14,8 +14,8 @@ export const GameConfig = {
   },
 
   dungeon: {
-    width: 10,
-    height: 10,
+    width: 80,
+    height: 60,
   },
 
   player: {

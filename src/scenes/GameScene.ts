@@ -56,6 +56,11 @@ export class GameScene extends Phaser.Scene {
 
     // 초기 HP 전송
     this.events.emit('playerHPChanged', this.player.getHP(), this.player.getMaxHP());
+
+    // F5 키로 던전 재생성
+    this.input.keyboard?.on('keydown-F5', () => {
+      this.scene.restart();
+    });
   }
 
   private renderDungeon(): void {
@@ -88,6 +93,17 @@ export class GameScene extends Phaser.Scene {
             // 벽 디테일
             this.tileGraphics.fillStyle(0x5a4c38, 0.5);
             this.tileGraphics.fillRect(px + 4, py + 4, tileSize - 8, tileSize - 8);
+            break;
+
+          case TileType.DOOR:
+            // 문 타일 (나무 색상)
+            this.tileGraphics.fillStyle(0x8b4513, 1);
+            this.tileGraphics.fillRect(px, py, tileSize, tileSize);
+            this.tileGraphics.lineStyle(2, 0x654321, 1);
+            this.tileGraphics.strokeRect(px, py, tileSize, tileSize);
+            // 문 손잡이
+            this.tileGraphics.fillStyle(0xffff00, 1);
+            this.tileGraphics.fillCircle(px + tileSize * 0.7, py + tileSize / 2, 3);
             break;
         }
       }
