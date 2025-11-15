@@ -6,6 +6,7 @@ import { Enemy, EnemyType } from '../entities/Enemy';
 import { CombatSystem } from '../systems/CombatSystem';
 import { LootSystem } from '../systems/LootSystem';
 import { SoundSystem } from '../systems/SoundSystem';
+import { i18n } from '../config/i18n';
 
 export class GameScene extends Phaser.Scene {
   private dungeon!: DungeonGenerator;
@@ -190,7 +191,7 @@ export class GameScene extends Phaser.Scene {
   private setupLighting(): void {
     // 조명 시스템 활성화
     this.lights.enable();
-    this.lights.setAmbientColor(0x0a0a0a); // 매우 어두운 주변 조명 (다크 판타지)
+    this.lights.setAmbientColor(0x404040); // 주변 조명을 밝게 조정 (리소스 가시성 개선)
 
     // 던전 방에 횃불 추가
     this.addTorchesToRooms();
@@ -282,9 +283,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onBossDefeated(): void {
-    // 보스 처치 축하 메시지
+    // 보스 처치 축하 메시지 - 다국어 지원
     const { width, height } = this.cameras.main;
-    const congratsText = this.add.text(width / 2, height / 2, `FLOOR ${this.currentFloor} CLEARED!`, {
+    const t = i18n.t();
+    const congratsText = this.add.text(width / 2, height / 2, `${t.floor.toUpperCase()} ${this.currentFloor} ${t.messages.floorCleared.toUpperCase()}`, {
       fontFamily: 'Cinzel',
       fontSize: '48px',
       fontStyle: 'bold',

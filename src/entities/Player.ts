@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../config/GameConfig';
+import { i18n } from '../config/i18n';
 
 export class Player {
   private scene: Phaser.Scene;
@@ -252,7 +253,8 @@ export class Player {
 
   private showCriticalEffect(): void {
     const playerPos = this.getPosition();
-    const critText = this.scene.add.text(playerPos.x, playerPos.y - 50, 'CRITICAL!', {
+    const t = i18n.t();
+    const critText = this.scene.add.text(playerPos.x, playerPos.y - 50, t.messages.critical.toUpperCase(), {
       font: 'bold 20px monospace',
       color: '#ff0000'
     });
@@ -270,7 +272,10 @@ export class Player {
   }
 
   update(): void {
-    if (!this.body) return;
+    if (!this.body) {
+      console.error('[Player] Body is null!');
+      return;
+    }
 
     // 대쉬 처리
     if (!this.isDashing && this.spaceKey?.isDown) {
@@ -283,16 +288,26 @@ export class Player {
       let velocityY = 0;
 
       // WASD 또는 화살표 키 입력 처리
-      if (this.cursors?.left.isDown || this.wasd?.A.isDown) {
+      const leftPressed = this.cursors?.left.isDown || this.wasd?.A.isDown;
+      const rightPressed = this.cursors?.right.isDown || this.wasd?.D.isDown;
+      const upPressed = this.cursors?.up.isDown || this.wasd?.W.isDown;
+      const downPressed = this.cursors?.down.isDown || this.wasd?.S.isDown;
+
+      if (leftPressed) {
         velocityX = -GameConfig.player.speed;
-      } else if (this.cursors?.right.isDown || this.wasd?.D.isDown) {
+      } else if (rightPressed) {
         velocityX = GameConfig.player.speed;
       }
 
-      if (this.cursors?.up.isDown || this.wasd?.W.isDown) {
+      if (upPressed) {
         velocityY = -GameConfig.player.speed;
-      } else if (this.cursors?.down.isDown || this.wasd?.S.isDown) {
+      } else if (downPressed) {
         velocityY = GameConfig.player.speed;
+      }
+
+      // 디버깅: 키 입력 및 속도 로그
+      if (velocityX !== 0 || velocityY !== 0) {
+        console.log(`[Player] Moving - VelX: ${velocityX}, VelY: ${velocityY}, Pos: (${this.container.x.toFixed(2)}, ${this.container.y.toFixed(2)})`);
       }
 
       this.body.setVelocity(velocityX, velocityY);
