@@ -49,12 +49,24 @@ export const GameConfig = {
         hp: 80,
         damage: 15,
         speed: 150,
+      },
+      boss: {
+        name: 'Boss',
+        color: 0xaa00aa,
+        hp: 200,
+        damage: 25,
+        speed: 120,
       }
     },
     chaseRange: 100, // pixels
     attackRange: 20, // pixels
     spawnCountMin: 2,
     spawnCountMax: 5,
+  },
+
+  floor: {
+    current: 1,
+    highScore: 0,
   }
 };
 

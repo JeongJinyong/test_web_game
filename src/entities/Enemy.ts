@@ -4,7 +4,8 @@ import { GameConfig } from '../config/GameConfig';
 export enum EnemyType {
   SLIME = 'slime',
   SKELETON = 'skeleton',
-  DEMON = 'demon'
+  DEMON = 'demon',
+  BOSS = 'boss'
 }
 
 export class Enemy {
@@ -83,6 +84,30 @@ export class Enemy {
       this.sprite.closePath();
       this.sprite.fillPath();
       this.sprite.strokePath();
+    } else if (this.type === EnemyType.BOSS) {
+      // 보스 - 큰 육각형
+      this.sprite.lineStyle(4, this.color);
+      this.sprite.fillStyle(this.color, 0.9);
+      const bigSize = size * 1.5;
+      this.sprite.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const x = Math.cos(angle) * bigSize;
+        const y = Math.sin(angle) * bigSize;
+        if (i === 0) {
+          this.sprite.moveTo(x, y);
+        } else {
+          this.sprite.lineTo(x, y);
+        }
+      }
+      this.sprite.closePath();
+      this.sprite.fillPath();
+      this.sprite.strokePath();
+
+      // 보스 눈
+      this.sprite.fillStyle(0xff0000, 1);
+      this.sprite.fillCircle(-8, -4, 3);
+      this.sprite.fillCircle(8, -4, 3);
     }
   }
 
