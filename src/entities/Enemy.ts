@@ -39,6 +39,9 @@ export class Enemy {
     this.drawEnemy();
     this.sprite.setPosition(x, y);
 
+    // 조명 효과 적용
+    this.sprite.setPipeline('Light2D');
+
     // 물리 바디 추가
     scene.physics.add.existing(this.sprite);
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
@@ -156,6 +159,9 @@ export class Enemy {
     this.currentHealth -= amount;
     this.updateHealthBar();
 
+    // 피격 사운드 이벤트
+    this.scene.events.emit('enemyHit');
+
     // 피격 효과 (깜빡임)
     this.scene.tweens.add({
       targets: this.sprite,
@@ -176,6 +182,9 @@ export class Enemy {
     // 속도 0으로
     this.body.setVelocity(0, 0);
 
+    // 피 파티클 효과
+    this.createBloodParticles();
+
     // 페이드아웃 효과
     this.fadeOutTween = this.scene.tweens.add({
       targets: [this.sprite, this.healthBar, this.healthBarBg],
@@ -188,6 +197,34 @@ export class Enemy {
 
     // 골드/아이템 드롭 (나중에 LootSystem과 연동)
     this.dropLoot();
+  }
+
+  private createBloodParticles(): void {
+    // 피 파티클 폭발
+    for (let i = 0; i < 15; i++) {
+      const particleGraphics = this.scene.add.graphics();
+      particleGraphics.fillStyle(0xaa0000, 1);
+      particleGraphics.fillCircle(0, 0, Phaser.Math.Between(2, 5));
+      particleGraphics.setPosition(this.sprite.x, this.sprite.y);
+      particleGraphics.setPipeline('Light2D');
+
+      const angle = Phaser.Math.Between(0, 360) * (Math.PI / 180);
+      const speed = Phaser.Math.Between(30, 80);
+      const endX = this.sprite.x + Math.cos(angle) * speed;
+      const endY = this.sprite.y + Math.sin(angle) * speed;
+
+      this.scene.tweens.add({
+        targets: particleGraphics,
+        x: endX,
+        y: endY,
+        alpha: 0,
+        duration: Phaser.Math.Between(400, 700),
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
+          particleGraphics.destroy();
+        }
+      });
+    }
   }
 
   private dropLoot(): void {

@@ -51,23 +51,48 @@ export class InventoryUI {
     this.container.setVisible(false);
     this.container.setDepth(1000);
 
-    // 배경
+    // 배경 (어두운 가죽 질감 느낌)
     const bgWidth = 600;
     const bgHeight = 500;
     const bgX = (width - bgWidth) / 2;
     const bgY = (height - bgHeight) / 2;
 
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x000000, 0.9);
+
+    // 가죽 질감 베이스
+    bg.fillStyle(0x1a0f08, 0.95);
     bg.fillRect(bgX, bgY, bgWidth, bgHeight);
-    bg.lineStyle(3, 0x444444, 1);
+
+    // 가죽 테두리
+    bg.lineStyle(5, 0x4a2810, 1);
     bg.strokeRect(bgX, bgY, bgWidth, bgHeight);
+
+    // 안쪽 테두리
+    bg.lineStyle(2, 0x2a1808, 1);
+    bg.strokeRect(bgX + 8, bgY + 8, bgWidth - 16, bgHeight - 16);
+
+    // 가죽 스티치 느낌
+    for (let i = 0; i < bgWidth; i += 20) {
+      bg.fillStyle(0x3a2010, 0.5);
+      bg.fillCircle(bgX + i, bgY + 4, 2);
+      bg.fillCircle(bgX + i, bgY + bgHeight - 4, 2);
+    }
+    for (let i = 0; i < bgHeight; i += 20) {
+      bg.fillStyle(0x3a2010, 0.5);
+      bg.fillCircle(bgX + 4, bgY + i, 2);
+      bg.fillCircle(bgX + bgWidth - 4, bgY + i, 2);
+    }
+
     this.container.add(bg);
 
-    // 타이틀
+    // 타이틀 (고딕 폰트)
     const title = this.scene.add.text(width / 2, bgY + 20, 'INVENTORY [I]', {
-      font: 'bold 24px monospace',
-      color: '#ffaa00'
+      fontFamily: 'Cinzel',
+      fontSize: '28px',
+      fontStyle: 'bold',
+      color: '#8b6914',
+      stroke: '#000000',
+      strokeThickness: 3
     });
     title.setOrigin(0.5, 0);
     this.container.add(title);
@@ -78,11 +103,12 @@ export class InventoryUI {
     // 인벤토리 슬롯 영역
     this.createInventorySlots(bgX + 30, bgY + 270);
 
-    // 안내 텍스트
+    // 안내 텍스트 (고딕 폰트)
     const helpText = this.scene.add.text(width / 2, bgY + bgHeight - 30,
       'Left Click: Use/Equip | Right Click: Unequip', {
-      font: '14px monospace',
-      color: '#888888'
+      fontFamily: 'Cinzel',
+      fontSize: '12px',
+      color: '#665533'
     });
     helpText.setOrigin(0.5, 0);
     this.container.add(helpText);
@@ -92,8 +118,10 @@ export class InventoryUI {
   private createEquipmentSlots(startX: number, startY: number): void {
     const labelY = startY - 30;
     const label = this.scene.add.text(startX, labelY, 'Equipment', {
-      font: 'bold 18px monospace',
-      color: '#ffffff'
+      fontFamily: 'Cinzel',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#aa8844'
     });
     this.container.add(label);
 
@@ -104,18 +132,19 @@ export class InventoryUI {
     ];
 
     slots.forEach(slot => {
-      // 슬롯 배경
+      // 슬롯 배경 (가죽 질감)
       const slotBg = this.scene.add.graphics();
-      slotBg.lineStyle(2, 0x555555, 1);
-      slotBg.fillStyle(0x222222, 1);
+      slotBg.lineStyle(3, 0x4a2810, 1);
+      slotBg.fillStyle(0x1a0f08, 0.8);
       slotBg.fillRect(slot.x, startY, 140, 120);
       slotBg.strokeRect(slot.x, startY, 140, 120);
       this.container.add(slotBg);
 
-      // 슬롯 라벨
+      // 슬롯 라벨 (고딕 폰트)
       const slotLabel = this.scene.add.text(slot.x + 70, startY + 10, slot.label, {
-        font: '14px monospace',
-        color: '#aaaaaa'
+        fontFamily: 'Cinzel',
+        fontSize: '14px',
+        color: '#aa8844'
       });
       slotLabel.setOrigin(0.5, 0);
       this.container.add(slotLabel);
@@ -125,9 +154,10 @@ export class InventoryUI {
       this.equipmentGraphics[slot.key] = itemGraphic;
       this.container.add(itemGraphic);
 
-      // 아이템 텍스트
+      // 아이템 텍스트 (고딕 폰트)
       const itemText = this.scene.add.text(slot.x + 70, startY + 90, '', {
-        font: '12px monospace',
+        fontFamily: 'Cinzel',
+        fontSize: '11px',
         color: '#ffffff',
         align: 'center',
         wordWrap: { width: 130 }
@@ -153,8 +183,10 @@ export class InventoryUI {
   private createInventorySlots(startX: number, startY: number): void {
     const labelY = startY - 30;
     const label = this.scene.add.text(startX, labelY, 'Items (8 Slots)', {
-      font: 'bold 18px monospace',
-      color: '#ffffff'
+      fontFamily: 'Cinzel',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#aa8844'
     });
     this.container.add(label);
 
@@ -166,18 +198,19 @@ export class InventoryUI {
       const x = startX + col * (this.slotSize + this.slotPadding);
       const y = startY + row * (this.slotSize + this.slotPadding);
 
-      // 슬롯 배경
+      // 슬롯 배경 (가죽 질감)
       const slotBg = this.scene.add.graphics();
-      slotBg.lineStyle(2, 0x555555, 1);
-      slotBg.fillStyle(0x222222, 1);
+      slotBg.lineStyle(2, 0x4a2810, 1);
+      slotBg.fillStyle(0x1a0f08, 0.8);
       slotBg.fillRect(x, y, this.slotSize, this.slotSize);
       slotBg.strokeRect(x, y, this.slotSize, this.slotSize);
       this.container.add(slotBg);
 
-      // 슬롯 번호
+      // 슬롯 번호 (고딕 폰트)
       const slotNum = this.scene.add.text(x + 4, y + 4, `${i + 1}`, {
-        font: '10px monospace',
-        color: '#555555'
+        fontFamily: 'Cinzel',
+        fontSize: '10px',
+        color: '#665533'
       });
       this.container.add(slotNum);
 
@@ -455,7 +488,8 @@ export class InventoryUI {
     const texts = lines.map((line, i) => {
       const color = i === 0 ? this.getRarityColorHex(item.rarity) : '#ffffff';
       return this.scene.add.text(padding, padding + i * 20, line, {
-        font: '14px monospace',
+        fontFamily: 'Cinzel',
+        fontSize: '12px',
         color: color
       });
     });
