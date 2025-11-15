@@ -2,12 +2,14 @@ import Phaser from 'phaser';
 import { GameConfig } from '../config/GameConfig';
 import { DungeonGenerator, TileType } from '../systems/DungeonGenerator';
 import { Player } from '../entities/Player';
-import { Enemy } from '../entities/Enemy';
+import { Enemy, EnemyType } from '../entities/Enemy';
+import { CombatSystem } from '../systems/CombatSystem';
 
 export class GameScene extends Phaser.Scene {
   private dungeon!: DungeonGenerator;
   private player!: Player;
   private enemies: Enemy[] = [];
+  private combatSystem!: CombatSystem;
   private tileGraphics!: Phaser.GameObjects.Graphics;
   private camera!: Phaser.Cameras.Scene2D.Camera;
 
@@ -27,8 +29,15 @@ export class GameScene extends Phaser.Scene {
     const spawnPos = this.dungeon.getSpawnPosition();
     this.player = new Player(this, spawnPos.x, spawnPos.y);
 
-    // 적 생성 (몇 마리)
-    this.spawnEnemies(3);
+    // 적 생성 (2-5마리 랜덤)
+    const enemyCount = Phaser.Math.Between(
+      GameConfig.enemy.spawnCountMin,
+      GameConfig.enemy.spawnCountMax
+    );
+    this.spawnEnemies(enemyCount);
+
+    // 전투 시스템 초기화
+    this.combatSystem = new CombatSystem(this, this.player, this.enemies);
 
     // 카메라 설정
     this.camera = this.cameras.main;
@@ -44,6 +53,9 @@ export class GameScene extends Phaser.Scene {
 
     // UI 씬 시작
     this.scene.launch('UIScene');
+
+    // 초기 HP 전송
+    this.events.emit('playerHPChanged', this.player.getHP(), this.player.getMaxHP());
   }
 
   private renderDungeon(): void {
@@ -84,20 +96,31 @@ export class GameScene extends Phaser.Scene {
 
   private spawnEnemies(count: number): void {
     const tiles = this.dungeon.getTiles();
+    const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
+
+    // 적 타입 배열
+    const enemyTypes = [EnemyType.SLIME, EnemyType.SKELETON, EnemyType.DEMON];
 
     for (let i = 0; i < count; i++) {
-      let x, y;
+      let tileX, tileY;
       let attempts = 0;
 
       // 빈 공간 찾기
       do {
-        x = Phaser.Math.Between(1, GameConfig.dungeon.width - 2);
-        y = Phaser.Math.Between(1, GameConfig.dungeon.height - 2);
+        tileX = Phaser.Math.Between(1, GameConfig.dungeon.width - 2);
+        tileY = Phaser.Math.Between(1, GameConfig.dungeon.height - 2);
         attempts++;
-      } while (tiles[y][x] !== TileType.FLOOR && attempts < 100);
+      } while (tiles[tileY][tileX] !== TileType.FLOOR && attempts < 100);
 
       if (attempts < 100) {
-        const enemy = new Enemy(this, x, y);
+        // 랜덤 타입 선택
+        const randomType = Phaser.Math.RND.pick(enemyTypes);
+
+        // 픽셀 좌표로 변환
+        const x = tileX * tileSize + tileSize / 2;
+        const y = tileY * tileSize + tileSize / 2;
+
+        const enemy = new Enemy(this, x, y, randomType);
         this.enemies.push(enemy);
       }
     }
@@ -107,7 +130,11 @@ export class GameScene extends Phaser.Scene {
     // 플레이어 업데이트
     this.player.update();
 
-    // 적 업데이트
-    this.enemies.forEach(enemy => enemy.update());
+    // 전투 시스템 업데이트
+    if (this.combatSystem) {
+      this.combatSystem.update();
+      // 죽은 적 제거
+      this.enemies = this.combatSystem.getEnemies();
+    }
   }
 }
