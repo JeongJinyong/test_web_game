@@ -10,6 +10,7 @@ export enum EnemyType {
 
 export class Enemy {
   private scene: Phaser.Scene;
+  private container: Phaser.GameObjects.Container;
   private sprite: Phaser.GameObjects.Graphics;
   private body: Phaser.Physics.Arcade.Body;
   private healthBar!: Phaser.GameObjects.Graphics;
@@ -35,17 +36,22 @@ export class Enemy {
     this.speed = enemyConfig.speed;
     this.color = enemyConfig.color;
 
+    // Container 생성
+    this.container = scene.add.container(x, y);
+
     // Graphics로 적 생성
     this.sprite = scene.add.graphics();
     this.drawEnemy();
-    this.sprite.setPosition(x, y);
+
+    // Graphics를 Container에 추가
+    this.container.add(this.sprite);
 
     // 조명 효과 적용
     this.sprite.setPipeline('Light2D');
 
-    // 물리 바디 추가
-    scene.physics.add.existing(this.sprite);
-    this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    // Container에 물리 바디 추가
+    scene.physics.add.existing(this.container);
+    this.body = this.container.body as Phaser.Physics.Arcade.Body;
     const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
     this.body.setCircle(tileSize / 3);
     this.body.setOffset(-tileSize / 3, -tileSize / 3);
@@ -147,22 +153,22 @@ export class Enemy {
     this.healthBar.fillRect(-barWidth / 2, offsetY, currentBarWidth, barHeight);
 
     // HP바 위치 업데이트
-    this.healthBar.setPosition(this.sprite.x, this.sprite.y);
-    this.healthBarBg.setPosition(this.sprite.x, this.sprite.y);
+    this.healthBar.setPosition(this.container.x, this.container.y);
+    this.healthBarBg.setPosition(this.container.x, this.container.y);
   }
 
   update(playerX: number, playerY: number): void {
     if (this.isDead) return;
 
     const distance = Phaser.Math.Distance.Between(
-      this.sprite.x, this.sprite.y,
+      this.container.x, this.container.y,
       playerX, playerY
     );
 
     // 플레이어 추적 (범위 내)
     if (distance < GameConfig.enemy.chaseRange) {
       const angle = Phaser.Math.Angle.Between(
-        this.sprite.x, this.sprite.y,
+        this.container.x, this.container.y,
         playerX, playerY
       );
 
@@ -189,7 +195,7 @@ export class Enemy {
 
     // 피격 효과 (깜빡임)
     this.scene.tweens.add({
-      targets: this.sprite,
+      targets: this.container,
       alpha: 0.5,
       duration: 100,
       yoyo: true,
@@ -212,7 +218,7 @@ export class Enemy {
 
     // 페이드아웃 효과
     this.fadeOutTween = this.scene.tweens.add({
-      targets: [this.sprite, this.healthBar, this.healthBarBg],
+      targets: [this.container, this.healthBar, this.healthBarBg],
       alpha: 0,
       duration: 500,
       onComplete: () => {
@@ -230,13 +236,13 @@ export class Enemy {
       const particleGraphics = this.scene.add.graphics();
       particleGraphics.fillStyle(0xaa0000, 1);
       particleGraphics.fillCircle(0, 0, Phaser.Math.Between(2, 5));
-      particleGraphics.setPosition(this.sprite.x, this.sprite.y);
+      particleGraphics.setPosition(this.container.x, this.container.y);
       particleGraphics.setPipeline('Light2D');
 
       const angle = Phaser.Math.Between(0, 360) * (Math.PI / 180);
       const speed = Phaser.Math.Between(30, 80);
-      const endX = this.sprite.x + Math.cos(angle) * speed;
-      const endY = this.sprite.y + Math.sin(angle) * speed;
+      const endX = this.container.x + Math.cos(angle) * speed;
+      const endY = this.container.y + Math.sin(angle) * speed;
 
       this.scene.tweens.add({
         targets: particleGraphics,
@@ -255,8 +261,8 @@ export class Enemy {
   private dropLoot(): void {
     // LootSystem에 드롭 이벤트 발생
     this.scene.events.emit('enemyDied', {
-      x: this.sprite.x,
-      y: this.sprite.y
+      x: this.container.x,
+      y: this.container.y
     });
   }
 
@@ -264,13 +270,13 @@ export class Enemy {
     if (this.fadeOutTween) {
       this.fadeOutTween.stop();
     }
-    this.sprite.destroy();
+    this.container.destroy();
     this.healthBar.destroy();
     this.healthBarBg.destroy();
   }
 
-  getSprite(): Phaser.GameObjects.Graphics {
-    return this.sprite;
+  getSprite(): Phaser.GameObjects.Container {
+    return this.container;
   }
 
   getBody(): Phaser.Physics.Arcade.Body {
