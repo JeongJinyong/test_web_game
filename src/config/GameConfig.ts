@@ -20,6 +20,41 @@ export const GameConfig = {
 
   player: {
     speed: 150,
+    maxHP: 100,
+    attackDamageMin: 10,
+    attackDamageMax: 15,
+    attackCooldown: 500, // milliseconds
+    attackRange: 50, // pixels
+  },
+
+  enemy: {
+    types: {
+      slime: {
+        name: 'Slime',
+        color: 0x44ff44,
+        hp: 30,
+        damage: 5,
+        speed: 50,
+      },
+      skeleton: {
+        name: 'Skeleton',
+        color: 0x888888,
+        hp: 50,
+        damage: 10,
+        speed: 100,
+      },
+      demon: {
+        name: 'Demon',
+        color: 0xff4444,
+        hp: 80,
+        damage: 15,
+        speed: 150,
+      }
+    },
+    chaseRange: 100, // pixels
+    attackRange: 20, // pixels
+    spawnCountMin: 2,
+    spawnCountMax: 5,
   }
 };
 
