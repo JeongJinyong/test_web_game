@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ItemData, ItemType, ItemRarity } from '../systems/LootSystem';
+import { i18n } from '../config/i18n';
 
 // 장착 슬롯
 export interface EquipmentSlot {
@@ -85,8 +86,9 @@ export class InventoryUI {
 
     this.container.add(bg);
 
-    // 타이틀 (고딕 폰트)
-    const title = this.scene.add.text(width / 2, bgY + 20, 'INVENTORY [I]', {
+    // 타이틀 (고딕 폰트) - 다국어 지원
+    const t = i18n.t();
+    const title = this.scene.add.text(width / 2, bgY + 20, `${t.inventory.toUpperCase()} [I]`, {
       fontFamily: 'Cinzel',
       fontSize: '28px',
       fontStyle: 'bold',
@@ -103,9 +105,9 @@ export class InventoryUI {
     // 인벤토리 슬롯 영역
     this.createInventorySlots(bgX + 30, bgY + 270);
 
-    // 안내 텍스트 (고딕 폰트)
+    // 안내 텍스트 (고딕 폰트) - 다국어 지원
     const helpText = this.scene.add.text(width / 2, bgY + bgHeight - 30,
-      'Left Click: Use/Equip | Right Click: Unequip', {
+      `${t.actions.leftClick}: ${t.actions.use}/${t.actions.equip} | ${t.actions.rightClick}: ${t.actions.unequip}`, {
       fontFamily: 'Cinzel',
       fontSize: '12px',
       color: '#665533'
@@ -116,8 +118,9 @@ export class InventoryUI {
 
   // 장착 슬롯 생성
   private createEquipmentSlots(startX: number, startY: number): void {
+    const t = i18n.t();
     const labelY = startY - 30;
-    const label = this.scene.add.text(startX, labelY, 'Equipment', {
+    const label = this.scene.add.text(startX, labelY, t.equipment, {
       fontFamily: 'Cinzel',
       fontSize: '20px',
       fontStyle: 'bold',
@@ -126,9 +129,9 @@ export class InventoryUI {
     this.container.add(label);
 
     const slots: { key: keyof EquipmentSlot, label: string, x: number }[] = [
-      { key: 'weapon', label: 'Weapon', x: startX },
-      { key: 'armor', label: 'Armor', x: startX + 180 },
-      { key: 'ring', label: 'Ring', x: startX + 360 }
+      { key: 'weapon', label: t.equipmentSlots.weapon, x: startX },
+      { key: 'armor', label: t.equipmentSlots.armor, x: startX + 180 },
+      { key: 'ring', label: t.equipmentSlots.ring, x: startX + 360 }
     ];
 
     slots.forEach(slot => {
@@ -181,8 +184,9 @@ export class InventoryUI {
 
   // 인벤토리 슬롯 생성
   private createInventorySlots(startX: number, startY: number): void {
+    const t = i18n.t();
     const labelY = startY - 30;
-    const label = this.scene.add.text(startX, labelY, 'Items (8 Slots)', {
+    const label = this.scene.add.text(startX, labelY, `${t.items} (8 ${t.slots})`, {
       fontFamily: 'Cinzel',
       fontSize: '20px',
       fontStyle: 'bold',
@@ -283,7 +287,8 @@ export class InventoryUI {
     const emptySlotIndex = this.inventorySlots.findIndex(slot => slot === null);
 
     if (emptySlotIndex === -1) {
-      console.log('Inventory is full!');
+      const t = i18n.t();
+      console.log(t.messages.inventoryFull);
       return false;
     }
 
@@ -391,7 +396,8 @@ export class InventoryUI {
     if (this.equipment[slotKey]) {
       const returned = this.addItem(this.equipment[slotKey]!);
       if (!returned) {
-        console.log('Cannot equip: inventory full');
+        const t = i18n.t();
+        console.log(t.messages.cannotEquip);
         return;
       }
     }
@@ -415,7 +421,8 @@ export class InventoryUI {
     // 인벤토리에 공간이 있는지 확인
     const added = this.addItem(item);
     if (!added) {
-      console.log('Cannot unequip: inventory full');
+      const t = i18n.t();
+      console.log(t.messages.cannotUnequip);
       return;
     }
 
@@ -478,10 +485,11 @@ export class InventoryUI {
     bg.fillStyle(0x000000, 0.95);
     bg.lineStyle(2, this.getRarityColor(item.rarity), 1);
 
-    // 툴팁 텍스트
+    const t = i18n.t();
+    // 툴팁 텍스트 - 다국어 지원
     const lines = [
       item.name,
-      `Rarity: ${item.rarity.toUpperCase()}`,
+      `${this.getRarityName(item.rarity)}`,
       this.getStatDescription(item)
     ];
 
@@ -521,17 +529,35 @@ export class InventoryUI {
     }
   }
 
-  // 스탯 설명
+  // 스탯 설명 - 다국어 지원
   private getStatDescription(item: ItemData): string {
+    const t = i18n.t();
     switch (item.type) {
       case ItemType.WEAPON:
-        return `+${item.statValue} Attack Damage`;
+        return `+${item.statValue} ${t.stats.attackDamage}`;
       case ItemType.ARMOR:
-        return `+${item.statValue} Max HP`;
+        return `+${item.statValue} ${t.stats.maxHP}`;
       case ItemType.RING:
-        return `+${item.statValue}% Critical Chance`;
+        return `+${item.statValue}% ${t.stats.criticalChance}`;
       case ItemType.POTION:
-        return `Restore ${item.statValue} HP`;
+        return `${t.stats.restoreHP} ${item.statValue} HP`;
+      default:
+        return '';
+    }
+  }
+
+  // 등급 이름 가져오기 - 다국어 지원
+  private getRarityName(rarity: ItemRarity): string {
+    const t = i18n.t();
+    switch (rarity) {
+      case ItemRarity.COMMON:
+        return t.rarity.common;
+      case ItemRarity.RARE:
+        return t.rarity.rare;
+      case ItemRarity.EPIC:
+        return t.rarity.epic;
+      case ItemRarity.LEGENDARY:
+        return t.rarity.legendary;
       default:
         return '';
     }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { InventoryUI } from '../ui/InventoryUI';
 import { ItemData, ItemType } from '../systems/LootSystem';
+import { i18n } from '../config/i18n';
 
 export class UIScene extends Phaser.Scene {
   private healthText!: Phaser.GameObjects.Text;
@@ -37,8 +38,9 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.cameras.main;
 
-    // 타이틀 (고딕 폰트)
-    this.titleText = this.add.text(16, 16, 'DARK DUNGEON', {
+    // 타이틀 (고딕 폰트) - 다국어 지원
+    const t = i18n.t();
+    this.titleText = this.add.text(16, 16, t.title.toUpperCase(), {
       fontFamily: 'Cinzel',
       fontSize: '28px',
       fontStyle: 'bold',
@@ -49,7 +51,7 @@ export class UIScene extends Phaser.Scene {
     this.titleText.setScrollFactor(0);
 
     // 층수 표시
-    this.floorText = this.add.text(16, 120, `FLOOR: ${this.currentFloor}`, {
+    this.floorText = this.add.text(16, 120, `${t.floor.toUpperCase()}: ${this.currentFloor}`, {
       fontFamily: 'Cinzel',
       fontSize: '18px',
       fontStyle: 'bold',
@@ -60,7 +62,7 @@ export class UIScene extends Phaser.Scene {
     this.floorText.setScrollFactor(0);
 
     // HP 텍스트 (고딕 폰트)
-    this.healthText = this.add.text(16, 55, 'VITALITY: 100/100', {
+    this.healthText = this.add.text(16, 55, `${t.vitality.toUpperCase()}: 100/100`, {
       fontFamily: 'Cinzel',
       fontSize: '16px',
       color: '#aa0000',
@@ -84,9 +86,9 @@ export class UIScene extends Phaser.Scene {
     this.healthBar.setScrollFactor(0);
     this.updateHealthBar();
 
-    // 조작 안내 업데이트 (고딕 폰트)
-    this.controlsText = this.add.text(width - 16, height - 120,
-      'Controls:\nWASD or Arrow Keys - Move\nLeft Click - Attack\nSPACE - Dash (5s cooldown)\nE - Pick up Item\nI - Inventory', {
+    // 조작 안내 업데이트 (고딕 폰트) - 다국어 지원
+    const controlsText = `${t.controls.title}:\n${t.controls.move}\n${t.controls.attack}\n${t.controls.dash}\n${t.controls.pickup}\n${t.controls.inventory}`;
+    this.controlsText = this.add.text(width - 16, height - 120, controlsText, {
       fontFamily: 'Cinzel',
       fontSize: '12px',
       color: '#666666',
@@ -212,7 +214,8 @@ export class UIScene extends Phaser.Scene {
     this.currentHP = currentHP;
     this.maxHP = maxHP;
 
-    this.healthText.setText(`VITALITY: ${currentHP}/${maxHP}`);
+    const t = i18n.t();
+    this.healthText.setText(`${t.vitality.toUpperCase()}: ${currentHP}/${maxHP}`);
     this.updateHealthBar();
   }
 
@@ -331,6 +334,7 @@ export class UIScene extends Phaser.Scene {
 
   private showGameOver(): void {
     const { width, height } = this.cameras.main;
+    const t = i18n.t();
 
     // 최고 층수 가져오기
     const highScore = localStorage.getItem('highScore');
@@ -342,8 +346,8 @@ export class UIScene extends Phaser.Scene {
     gameOverBg.fillRect(0, 0, width, height);
     gameOverBg.setScrollFactor(0);
 
-    // 게임 오버 텍스트 (고딕 폰트)
-    const gameOverText = this.add.text(width / 2, height / 2 - 80, 'YOU DIED', {
+    // 게임 오버 텍스트 (고딕 폰트) - 다국어 지원
+    const gameOverText = this.add.text(width / 2, height / 2 - 80, t.messages.youDied.toUpperCase(), {
       fontFamily: 'Cinzel',
       fontSize: '72px',
       fontStyle: 'bold',
@@ -355,7 +359,7 @@ export class UIScene extends Phaser.Scene {
     gameOverText.setScrollFactor(0);
 
     // 도달한 층수
-    const reachedFloorText = this.add.text(width / 2, height / 2, `Reached Floor: ${this.currentFloor}`, {
+    const reachedFloorText = this.add.text(width / 2, height / 2, `${t.messages.reachedFloor}: ${this.currentFloor}`, {
       fontFamily: 'Cinzel',
       fontSize: '32px',
       color: '#ffaa00',
@@ -366,7 +370,7 @@ export class UIScene extends Phaser.Scene {
     reachedFloorText.setScrollFactor(0);
 
     // 최고 층수 기록
-    const highScoreText = this.add.text(width / 2, height / 2 + 50, `Best Floor: ${highScoreNum}`, {
+    const highScoreText = this.add.text(width / 2, height / 2 + 50, `${t.messages.bestFloor}: ${highScoreNum}`, {
       fontFamily: 'Cinzel',
       fontSize: '24px',
       color: '#aaaaaa',
@@ -377,7 +381,7 @@ export class UIScene extends Phaser.Scene {
     highScoreText.setScrollFactor(0);
 
     // 재시작 안내 (고딕 폰트)
-    const restartText = this.add.text(width / 2, height / 2 + 120, 'Press R to Restart from Floor 1', {
+    const restartText = this.add.text(width / 2, height / 2 + 120, t.messages.restart, {
       fontFamily: 'Cinzel',
       fontSize: '20px',
       color: '#666666'
