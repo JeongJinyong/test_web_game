@@ -12,9 +12,18 @@ export class Player {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
+  private spaceKey?: Phaser.Input.Keyboard.Key;
 
   private tileX: number;
   private tileY: number;
+
+  // Dash skill properties
+  private isDashing: boolean = false;
+  private isInvincible: boolean = false;
+  private dashCooldown: number = 5000; // 5초
+  private lastDashTime: number = 0;
+  private dashDuration: number = 300; // 0.3초
+  private dashSpeed: number = 600;
 
   // Combat properties
   private maxHP: number;
@@ -72,6 +81,7 @@ export class Player {
         S: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
         D: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
       };
+      this.spaceKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
     // 마우스 클릭 이벤트
@@ -256,23 +266,31 @@ export class Player {
   update(): void {
     if (!this.body) return;
 
-    let velocityX = 0;
-    let velocityY = 0;
-
-    // WASD 또는 화살표 키 입력 처리
-    if (this.cursors?.left.isDown || this.wasd?.A.isDown) {
-      velocityX = -GameConfig.player.speed;
-    } else if (this.cursors?.right.isDown || this.wasd?.D.isDown) {
-      velocityX = GameConfig.player.speed;
+    // 대쉬 처리
+    if (!this.isDashing && this.spaceKey?.isDown) {
+      this.tryDash();
     }
 
-    if (this.cursors?.up.isDown || this.wasd?.W.isDown) {
-      velocityY = -GameConfig.player.speed;
-    } else if (this.cursors?.down.isDown || this.wasd?.S.isDown) {
-      velocityY = GameConfig.player.speed;
-    }
+    // 대쉬 중이 아닐 때만 일반 이동
+    if (!this.isDashing) {
+      let velocityX = 0;
+      let velocityY = 0;
 
-    this.body.setVelocity(velocityX, velocityY);
+      // WASD 또는 화살표 키 입력 처리
+      if (this.cursors?.left.isDown || this.wasd?.A.isDown) {
+        velocityX = -GameConfig.player.speed;
+      } else if (this.cursors?.right.isDown || this.wasd?.D.isDown) {
+        velocityX = GameConfig.player.speed;
+      }
+
+      if (this.cursors?.up.isDown || this.wasd?.W.isDown) {
+        velocityY = -GameConfig.player.speed;
+      } else if (this.cursors?.down.isDown || this.wasd?.S.isDown) {
+        velocityY = GameConfig.player.speed;
+      }
+
+      this.body.setVelocity(velocityX, velocityY);
+    }
 
     // 타일 위치 업데이트
     const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
@@ -280,7 +298,98 @@ export class Player {
     this.tileY = Math.floor(this.sprite.y / tileSize);
   }
 
+  private tryDash(): void {
+    const currentTime = this.scene.time.now;
+
+    // 쿨타임 체크
+    if (currentTime - this.lastDashTime < this.dashCooldown) {
+      return;
+    }
+
+    // 현재 이동 방향 계산
+    let dirX = 0;
+    let dirY = 0;
+
+    if (this.cursors?.left.isDown || this.wasd?.A.isDown) {
+      dirX = -1;
+    } else if (this.cursors?.right.isDown || this.wasd?.D.isDown) {
+      dirX = 1;
+    }
+
+    if (this.cursors?.up.isDown || this.wasd?.W.isDown) {
+      dirY = -1;
+    } else if (this.cursors?.down.isDown || this.wasd?.S.isDown) {
+      dirY = 1;
+    }
+
+    // 방향이 없으면 오른쪽으로 대쉬
+    if (dirX === 0 && dirY === 0) {
+      dirX = 1;
+    }
+
+    // 대쉬 실행
+    this.performDash(dirX, dirY);
+    this.lastDashTime = currentTime;
+  }
+
+  private performDash(dirX: number, dirY: number): void {
+    this.isDashing = true;
+    this.isInvincible = true;
+
+    // 대쉬 방향으로 빠르게 이동
+    this.body.setVelocity(dirX * this.dashSpeed, dirY * this.dashSpeed);
+
+    // 대쉬 이펙트
+    this.showDashEffect();
+
+    // 대쉬 종료
+    this.scene.time.delayedCall(this.dashDuration, () => {
+      this.isDashing = false;
+      this.isInvincible = false;
+      this.body.setVelocity(0, 0);
+    });
+
+    // 대쉬 사운드 (이벤트 발생)
+    this.scene.events.emit('playerDash');
+  }
+
+  private showDashEffect(): void {
+    // 잔상 효과
+    for (let i = 0; i < 5; i++) {
+      this.scene.time.delayedCall(i * 60, () => {
+        const afterImage = this.scene.add.graphics();
+        afterImage.fillStyle(0x00aaff, 0.5 - i * 0.1);
+        afterImage.fillCircle(this.sprite.x, this.sprite.y, 10);
+        afterImage.setPipeline('Light2D');
+
+        this.scene.tweens.add({
+          targets: afterImage,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => {
+            afterImage.destroy();
+          }
+        });
+      });
+    }
+  }
+
+  getDashCooldownProgress(): number {
+    const currentTime = this.scene.time.now;
+    const timeSinceLastDash = currentTime - this.lastDashTime;
+    return Math.min(timeSinceLastDash / this.dashCooldown, 1);
+  }
+
+  isPlayerInvincible(): boolean {
+    return this.isInvincible;
+  }
+
   takeDamage(amount: number): void {
+    // 무적 상태면 데미지 무시
+    if (this.isInvincible) {
+      return;
+    }
+
     this.currentHP -= amount;
     if (this.currentHP < 0) {
       this.currentHP = 0;

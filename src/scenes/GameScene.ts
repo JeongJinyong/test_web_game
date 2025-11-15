@@ -18,9 +18,16 @@ export class GameScene extends Phaser.Scene {
   private camera!: Phaser.Cameras.Scene2D.Camera;
   private playerLight?: Phaser.GameObjects.Light;
   private torchLights: Phaser.GameObjects.Light[] = [];
+  private currentFloor: number = 1;
+  private boss?: Enemy;
+  private bossRoomGraphics?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: 'GameScene' });
+  }
+
+  init(data: { floor?: number }): void {
+    this.currentFloor = data.floor || 1;
   }
 
   create(): void {
@@ -35,6 +42,9 @@ export class GameScene extends Phaser.Scene {
     // 타일맵 렌더링
     this.renderDungeon();
 
+    // 보스 방 표시
+    this.highlightBossRoom();
+
     // 조명 시스템 설정
     this.setupLighting();
 
@@ -46,12 +56,15 @@ export class GameScene extends Phaser.Scene {
     const playerPos = this.player.getPosition();
     this.playerLight = this.lights.addLight(playerPos.x, playerPos.y, 150, 0xaaccff, 1.5);
 
-    // 적 생성 (2-5마리 랜덤)
+    // 일반 적 생성 (2-5마리 랜덤)
     const enemyCount = Phaser.Math.Between(
       GameConfig.enemy.spawnCountMin,
       GameConfig.enemy.spawnCountMax
     );
     this.spawnEnemies(enemyCount);
+
+    // 보스 스폰
+    this.spawnBoss();
 
     // 전투 시스템 초기화
     this.combatSystem = new CombatSystem(this, this.player, this.enemies);
@@ -71,8 +84,8 @@ export class GameScene extends Phaser.Scene {
       GameConfig.dungeon.height * tileSize
     );
 
-    // UI 씬 시작
-    this.scene.launch('UIScene');
+    // UI 씬 시작 (층수 정보 전달)
+    this.scene.launch('UIScene', { floor: this.currentFloor });
 
     // 초기 HP 전송
     this.events.emit('playerHPChanged', this.player.getHP(), this.player.getMaxHP());
@@ -224,9 +237,100 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private highlightBossRoom(): void {
+    const bossRoom = this.dungeon.getBossRoom();
+    if (!bossRoom) return;
+
+    const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
+    this.bossRoomGraphics = this.add.graphics();
+
+    // 보스 방 테두리를 보라색으로 표시
+    this.bossRoomGraphics.lineStyle(4, 0xaa00aa, 0.6);
+    this.bossRoomGraphics.strokeRect(
+      bossRoom.x * tileSize,
+      bossRoom.y * tileSize,
+      bossRoom.width * tileSize,
+      bossRoom.height * tileSize
+    );
+
+    // 보스 방 배경을 살짝 보라색으로
+    this.bossRoomGraphics.fillStyle(0xaa00aa, 0.1);
+    this.bossRoomGraphics.fillRect(
+      bossRoom.x * tileSize,
+      bossRoom.y * tileSize,
+      bossRoom.width * tileSize,
+      bossRoom.height * tileSize
+    );
+
+    this.bossRoomGraphics.setPipeline('Light2D');
+  }
+
+  private spawnBoss(): void {
+    const bossRoom = this.dungeon.getBossRoom();
+    if (!bossRoom) return;
+
+    const bossPos = this.dungeon.getBossRoomPosition();
+    this.boss = new Enemy(this, bossPos.x, bossPos.y, EnemyType.BOSS);
+    this.enemies.push(this.boss);
+
+    // 보스 처치 감지
+    this.events.on('enemyDied', (data: { x: number, y: number }) => {
+      if (this.boss && this.boss.isDying()) {
+        this.onBossDefeated();
+      }
+    });
+  }
+
+  private onBossDefeated(): void {
+    // 보스 처치 축하 메시지
+    const { width, height } = this.cameras.main;
+    const congratsText = this.add.text(width / 2, height / 2, `FLOOR ${this.currentFloor} CLEARED!`, {
+      fontFamily: 'Cinzel',
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#ffaa00',
+      stroke: '#000000',
+      strokeThickness: 6
+    });
+    congratsText.setOrigin(0.5, 0.5);
+    congratsText.setScrollFactor(0);
+    congratsText.setDepth(1000);
+
+    // 페이드아웃
+    this.tweens.add({
+      targets: congratsText,
+      alpha: 0,
+      duration: 2000,
+      delay: 1000,
+      onComplete: () => {
+        congratsText.destroy();
+        // 다음 층으로
+        this.goToNextFloor();
+      }
+    });
+  }
+
+  private goToNextFloor(): void {
+    const nextFloor = this.currentFloor + 1;
+
+    // 최고 층수 업데이트
+    const highScore = localStorage.getItem('highScore');
+    const currentHighScore = highScore ? parseInt(highScore) : 0;
+    if (nextFloor > currentHighScore) {
+      localStorage.setItem('highScore', nextFloor.toString());
+    }
+
+    // UI 씬 정리
+    this.scene.stop('UIScene');
+
+    // 다음 층으로 재시작
+    this.scene.restart({ floor: nextFloor });
+  }
+
   private spawnEnemies(count: number): void {
     const tiles = this.dungeon.getTiles();
     const tileSize = GameConfig.tile.size * GameConfig.tile.scale;
+    const bossRoom = this.dungeon.getBossRoom();
 
     // 적 타입 배열
     const enemyTypes = [EnemyType.SLIME, EnemyType.SKELETON, EnemyType.DEMON];
@@ -235,12 +339,12 @@ export class GameScene extends Phaser.Scene {
       let tileX, tileY;
       let attempts = 0;
 
-      // 빈 공간 찾기
+      // 빈 공간 찾기 (보스 방 제외)
       do {
         tileX = Phaser.Math.Between(1, GameConfig.dungeon.width - 2);
         tileY = Phaser.Math.Between(1, GameConfig.dungeon.height - 2);
         attempts++;
-      } while (tiles[tileY][tileX] !== TileType.FLOOR && attempts < 100);
+      } while ((tiles[tileY][tileX] !== TileType.FLOOR || this.isInBossRoom(tileX, tileY, bossRoom)) && attempts < 100);
 
       if (attempts < 100) {
         // 랜덤 타입 선택
@@ -254,6 +358,12 @@ export class GameScene extends Phaser.Scene {
         this.enemies.push(enemy);
       }
     }
+  }
+
+  private isInBossRoom(tileX: number, tileY: number, bossRoom: any): boolean {
+    if (!bossRoom) return false;
+    return tileX >= bossRoom.x && tileX < bossRoom.x + bossRoom.width &&
+           tileY >= bossRoom.y && tileY < bossRoom.y + bossRoom.height;
   }
 
   update(time: number, delta: number): void {
@@ -272,6 +382,35 @@ export class GameScene extends Phaser.Scene {
       light.setIntensity(flicker);
     });
 
+    // 화면 밖 적 비활성화 최적화
+    const playerPos = this.player.getPosition();
+    const cameraView = this.cameras.main.worldView;
+    const cullingMargin = 200; // 화면 밖 200px까지는 활성화
+
+    // 적 업데이트 (화면 안에 있는 적만)
+    this.enemies.forEach(enemy => {
+      if (enemy.isDying()) return;
+
+      const enemyPos = enemy.getSprite();
+      const isInView = Phaser.Geom.Rectangle.Overlaps(
+        new Phaser.Geom.Rectangle(
+          enemyPos.x - cullingMargin,
+          enemyPos.y - cullingMargin,
+          cullingMargin * 2,
+          cullingMargin * 2
+        ),
+        cameraView
+      );
+
+      // 화면 안에 있는 적만 업데이트
+      if (isInView) {
+        enemy.update(playerPos.x, playerPos.y);
+      } else {
+        // 화면 밖 적은 정지
+        enemy.getBody().setVelocity(0, 0);
+      }
+    });
+
     // 전투 시스템 업데이트
     if (this.combatSystem) {
       this.combatSystem.update();
@@ -281,7 +420,6 @@ export class GameScene extends Phaser.Scene {
 
     // 루트 시스템 업데이트
     if (this.lootSystem) {
-      const playerPos = this.player.getPosition();
       this.lootSystem.update(playerPos.x, playerPos.y);
     }
   }
